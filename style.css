@@ -1,0 +1,47 @@
+ body {
+    margin: 0;
+    padding: 20px;
+    font-family: sans-serif;
+    background: #111;
+    color: #eee;
+}
+
+#controls {
+    margin-bottom: 10px;
+}
+
+/* canvas {
+    display: block;
+} */
+
+#overlay {
+    margin-top: 10px;
+}
+
+#container {
+    position: relative;
+    display: inline-block;
+    width: 90%;
+    height: 300px;
+}
+
+#glCanvas {
+    border: 1px solid #444;
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: 0;
+}
+
+#axisCanvas {
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: 1;
+    pointer-events: none;
+}
+
+input[type="number"] {
+    width: 60px;
+    align-content: center;
+}

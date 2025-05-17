@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>FFT Spectrum with Colormaps</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <div id="controls">
+        <label for="binSelect">FFT Bin Count:</label>
+        <select id="binSelect">
+            <option value="1024">1024</option>
+            <option value="4096" selected>4096</option>
+            <option value="8192">8192</option>
+            <option value="16384">16384</option>
+            <option value="32768">32768</option>
+        </select>
+
+        <label for="colorSelect">Color Map:</label>
+        <select id="colorSelect">
+            <option value="0">Viridis</option>
+            <option value="1" selected>Jet</option>
+        </select>
+
+        <label min_y for="minY">Min Y:</label>
+        <input type="number" id="minY" value="-130" step="1" />
+        <label max_y for="maxY">Max Y:</label>
+        <input type="number" id="maxY" value="-50" step="1" />
+    </div>
+
+    <div id="container">
+        <canvas id="spectrumCanvas"></canvas>
+        <canvas id="axisCanvas"></canvas>
+        <canvas id="waterfallCanvas" width="800" height="400"></canvas>
+    </div>
+
+    <div id="overlay">FPS: <span id="fps">0</span> | Bins: <span id="binCount">4096</span></div>
+    <button id="startButton">Start Audio</button>
+
+    <script src="script.js"></script>
+    <script src="shaders.js"></script>
+    <script src="axes.js"></script>
+</body>
+</html>
