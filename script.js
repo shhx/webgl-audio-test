@@ -27,17 +27,22 @@ let sourceNode;
 binSelect.addEventListener('change', () => {
     binCount = parseInt(binSelect.value, 10);
     binDisplay.textContent = binCount;
+    initWaterfallTexture(glWaterfall);
+    drawAxes();
 });
 
 colorSelect.addEventListener('change', () => {
     colorMap = parseInt(colorSelect.value, 10);
-    gl.uniform1i(uColorMap, colorMap);
+    glSpectrum.uniform1i(uColorMap, colorMap);
+    glWaterfall.uniform1i(waterfallColorMapUniform, colorMap);
 });
 minYInput.addEventListener('input', () => {
     min_y = parseFloat(minYInput.value);
+    drawAxes();
 });
 maxYInput.addEventListener('input', () => {
     max_y = parseFloat(maxYInput.value);
+    drawAxes();
 });
 
 minYInput.addEventListener('wheel', (event) => {
@@ -45,12 +50,18 @@ minYInput.addEventListener('wheel', (event) => {
     const delta = Math.sign(event.deltaY) * 0.5;
     min_y = parseFloat(minYInput.value) + delta;
     minYInput.value = min_y.toFixed(1);
+    drawAxes();
 });
 maxYInput.addEventListener('wheel', (event) => {
     event.preventDefault();
     const delta = Math.sign(event.deltaY) * 0.5;
     max_y = parseFloat(maxYInput.value) + delta;
     maxYInput.value = max_y.toFixed(1);
+    drawAxes();
+});
+
+window.addEventListener('resize', () => {
+    drawAxes();
 });
 
 const positionBuffer = glSpectrum.createBuffer();
@@ -63,7 +74,7 @@ function updateFPS() {
     const delta = now - lastTime;
     frameCount++;
     if (delta >= 1000) {
-        fpsDisplay.textContent = Math.round((frameCount * 1000) / delta);
+        fpsDisplay.textContent = ((frameCount * 1000) / delta).toFixed(1);
         frameCount = 0;
         lastTime = now;
     }
@@ -108,6 +119,7 @@ function drawAxes() {
 
 async function initAudio() {
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    document.getElementById("sampleRateValue").textContent = audioContext.sampleRate;
     analyser = audioContext.createAnalyser();
     analyser.fftSize = binCount;
     const bufferLength = analyser.frequencyBinCount;
@@ -138,6 +150,10 @@ function map(x, min, max, newMin, newMax) {
     return ((x - min) * (newMax - newMin)) / (max - min) + newMin;
 }
 
+function clamp_value(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+}
+
 function drawSpectrum(gl, fft) {
     gl.useProgram(spectrumProgram);
     gl.viewport(0, 0, spectrumCanvas.width, spectrumCanvas.height);
@@ -158,15 +174,16 @@ function drawSpectrum(gl, fft) {
     gl.drawArrays(gl.LINE_STRIP, 0, binCount);
 }
 
-const waterfallHeight = 256;
-let waterfallBuffer = new Uint8Array(binCount/2 * waterfallHeight);
+const waterfallHeight = 512;
+let waterfallBuffer = null;
 let waterfallTexture = null;
 
 // Setup waterfall texture
 function initWaterfallTexture(gl) {
     waterfallTexture = gl.createTexture();
+    waterfallBuffer = new Uint8Array(binCount/2 * waterfallHeight);
     gl.bindTexture(gl.TEXTURE_2D, waterfallTexture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, binCount, waterfallHeight, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, null);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, binCount/2, waterfallHeight, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, null);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -178,7 +195,7 @@ function updateWaterfall(gl, fft) {
     waterfallBuffer.set(waterfallBuffer.subarray(binCount/2), 0);
     for (let i = 0; i < binCount/2; i++) {
         const value = Math.floor(map(fft[i], min_y, max_y, 0, 255));
-        waterfallBuffer[(waterfallHeight - 1) * binCount/2 + i] = Math.max(0, Math.min(255, value));
+        waterfallBuffer[(waterfallHeight - 1) * binCount/2 + i] = clamp_value(value, 0, 255);
     }
 
     gl.activeTexture(gl.TEXTURE0);
@@ -195,7 +212,7 @@ function updateWaterfall(gl, fft) {
 
 // Draw waterfall plot
 function drawWaterfall(gl) {
-    gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffer);
+    gl.viewport(0, 0, waterfallCanvas.width, waterfallCanvas.height);
     gl.vertexAttribPointer(waterfallPositionAttrib, 2, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(waterfallPositionAttrib);
 
@@ -210,7 +227,6 @@ function drawWaterfall(gl) {
 // Modify render()
 function render() {
     updateFPS();
-    drawAxes();
     const fft = getFFTDataFromMic();
     drawSpectrum(glSpectrum, fft);         // Optional: remove if only waterfall is needed
     updateWaterfall(glWaterfall, fft);
@@ -223,5 +239,6 @@ function render() {
 initWaterfallTexture(glWaterfall);
 document.getElementById('startButton').addEventListener('click', () => {
     initAudio();
+    drawAxes();
     render();
 });
