@@ -56,20 +56,18 @@ const waterfallFsSource = `
 precision mediump float;
 uniform sampler2D uTexture;
 uniform int uColorMap;
+uniform float uTextureWidth;
 varying vec2 vTexCoord;
 
 vec3 viridis(float x) {
     x = clamp(x, 0.0, 1.0);
     vec4 x1 = vec4(1.0, x, x * x, x * x * x);
     vec4 x2 = x1 * x1.w * x;
-
     return vec3(
         dot(x1, vec4(+0.280268003, -0.143510503, +2.225793877, -14.815088879)) +
         dot(x2.xy, vec2(+25.212752309, -11.772589584)),
-
         dot(x1, vec4(-0.002117546, +1.617109353, -1.909305070, +2.701152864)) +
         dot(x2.xy, vec2(-1.685288385, +0.178738871)),
-
         dot(x1, vec4(+0.300805501, +2.614650302, -12.019139090, +28.933559110)) +
         dot(x2.xy, vec2(-33.491294770, +13.762053843))
     );
@@ -87,9 +85,19 @@ vec3 colormap(float t) {
 }
 
 void main() {
-    float value = texture2D(uTexture, vec2(vTexCoord.x, 1.0 - vTexCoord.y)).r;
+    float texelWidth = 1.0 / uTextureWidth;
+
+    float sum = 0.0;
+    sum += texture2D(uTexture, vec2(vTexCoord.x - 2.0 * texelWidth, 1.0 - vTexCoord.y)).r;
+    sum += texture2D(uTexture, vec2(vTexCoord.x - texelWidth,       1.0 - vTexCoord.y)).r;
+    sum += texture2D(uTexture, vec2(vTexCoord.x,                    1.0 - vTexCoord.y)).r;
+    sum += texture2D(uTexture, vec2(vTexCoord.x + texelWidth,       1.0 - vTexCoord.y)).r;
+    sum += texture2D(uTexture, vec2(vTexCoord.x + 2.0 * texelWidth, 1.0 - vTexCoord.y)).r;
+    float value = sum / 5.0;
+
     gl_FragColor = vec4(colormap(value), 1.0);
 }
+
 `;
 
 function createShader(gl, type, source) {
@@ -131,6 +139,7 @@ const waterfallVertexShader = createShader(glWaterfall, glWaterfall.VERTEX_SHADE
 const waterfallFragmentShader = createShader(glWaterfall, glWaterfall.FRAGMENT_SHADER, waterfallFsSource);
 const waterfallProgram = createProgram(glWaterfall, waterfallVertexShader, waterfallFragmentShader);
 
+const uTextureWidthLoc = glWaterfall.getUniformLocation(waterfallProgram, 'uTextureWidth');
 const waterfallPositionAttrib = glWaterfall.getAttribLocation(waterfallProgram, 'aPosition');
 const waterfallTextureUniform = glWaterfall.getUniformLocation(waterfallProgram, 'uTexture');
 const waterfallColorMapUniform = glWaterfall.getUniformLocation(waterfallProgram, 'uColorMap');

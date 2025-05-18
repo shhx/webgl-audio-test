@@ -154,9 +154,27 @@ function clamp_value(value, min, max) {
     return Math.max(min, Math.min(max, value));
 }
 
+function resizeCanvasToDisplaySize(canvas) {
+  // Lookup the size the browser is displaying the canvas in CSS pixels.
+  const displayWidth  = canvas.clientWidth;
+  const displayHeight = canvas.clientHeight;
+
+  // Check if the canvas is not the same size.
+  const needResize = canvas.width  !== displayWidth ||
+                     canvas.height !== displayHeight;
+
+  if (needResize) {
+    // Make the canvas the same size
+    canvas.width  = displayWidth;
+    canvas.height = displayHeight;
+  }
+
+  return needResize;
+}
+
 function drawSpectrum(gl, fft) {
     gl.useProgram(spectrumProgram);
-    gl.viewport(0, 0, spectrumCanvas.width, spectrumCanvas.height);
+    gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
     gl.clearColor(0.1, 0.1, 0.1, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
@@ -212,13 +230,14 @@ function updateWaterfall(gl, fft) {
 
 // Draw waterfall plot
 function drawWaterfall(gl) {
-    gl.viewport(0, 0, waterfallCanvas.width, waterfallCanvas.height);
+    gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
     gl.vertexAttribPointer(waterfallPositionAttrib, 2, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(waterfallPositionAttrib);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, waterfallTexture);
     gl.uniform1i(waterfallTextureUniform, 0);
+    gl.uniform1f(uTextureWidthLoc, binCount/2);
     gl.uniform1i(waterfallColorMapUniform, colorMap); // Optional for switching color maps
 
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
@@ -227,6 +246,11 @@ function drawWaterfall(gl) {
 // Modify render()
 function render() {
     updateFPS();
+    if(resizeCanvasToDisplaySize(spectrumCanvas)) {
+        drawAxes();
+    }
+    resizeCanvasToDisplaySize(axisCanvas);
+    resizeCanvasToDisplaySize(waterfallCanvas);
     const fft = getFFTDataFromMic();
     drawSpectrum(glSpectrum, fft);         // Optional: remove if only waterfall is needed
     updateWaterfall(glWaterfall, fft);
